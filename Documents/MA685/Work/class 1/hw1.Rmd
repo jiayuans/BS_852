@@ -1,0 +1,81 @@
+---
+title: "MA685 HW1#9"
+author: "Jiayuan Shi"
+date: "01/25/2016"
+output: pdf_document
+---
+```{r}
+library(ISLR)
+```
+
+#9a.
+```{r}
+pairs(Auto)
+```
+
+#9b.
+```{r}
+cor(subset(Auto, select=-name))
+```
+
+#9c.
+```{r}
+lm1 = lm(mpg~.-name, data=Auto)
+summary(lm1)
+```
+
+i.
+Yes, there is a relatioship between the predictors and the response by testing the null hypothesis of whether all the regression coefficients are zero. The F -statistic is has a small p-value, less than 0.01, indicating that we can reject the null hypothesis. Therefore, there is a significant relatioship between the predictors and the response.
+
+ii.
+From the p-values of each predictor, displacement, weight, year, and origin have a statistically significant relationship to the response(since they have small p-values < 0.01), while cylinders, horsepower, and acceleration do not.
+
+iii.
+The coefficient for year, 0.7508, suggests that for every one year increase, mpg also increases by 0.7508. 
+
+#9d.
+```{r}
+par(mfrow=c(2,2))
+plot(lm1)
+```
+There are three problems with the fit. One is that the curve pattern in the residuals plot indicates non-linearity in the data. The other is from the leverage plot, point 14 appears to have high leverage, although not a high magnitude residual.
+```{r}
+plot(predict(lm1), rstudent(lm1))
+```
+
+Also there may be some outliers in the plot of studentized residuals because there exist some values greater than 3.
+
+#9e.
+```{r}
+lm2 = lm(mpg~cylinders*displacement+displacement*weight, data=Auto)
+summary(lm2)
+```
+From the correlation matrix, I got the two highest correlated pairs(>0.9) and used them in picking my interaction effects. From the p-values, we can see that the interaction between displacement and weight is statistically signifcant with p-value < 0.01, while the interactiion between cylinders and displacement is not.
+
+#9f.
+```{r}
+lm3 = lm(log(mpg)~.-name, data=Auto)
+summary(lm3)
+par(mfrow=c(2,2))
+plot(lm3)
+plot(predict(lm3), rstudent(lm3))
+```
+
+From the correlation matrix in 9a., displacement, horsepower and weight show a similar nonlinear pattern against the response mpg. This nonlinear pattern is very close to a log form. So we use log(mpg) as our response variable.
+
+The outputs show that log transform of mpg yield better model fitting. For example, R^2 increases from 0.8215 to 0.8795. Residuals tend to be more normal. The curve pattern in the residuals plot indicates more linearity in the data. Also, there are less outliers in the plot of studentized residuals because all values are less than 3.
+
+
+
+
+a=3
+b=5
+y.m=matrix(nrow=a,ncol=b)
+y.m[1,]=c(9,12,10,8,15)
+y.m[2,]=c(20,21,23,17,30)
+y.m[3,]=c(6,5,8,16,7)
+y=as.vector(t(y.m))
+A=as.factor(rep(1:a,each=b))
+data=data.frame(A,y)
+lm.1=lm(y~A)
+summary.aov(lm.1)

@@ -1,0 +1,303 @@
+---
+output: pdf_document
+---
+
+## Exercise 2 (Conceptual: Lasso Regression)
+Exercise 3 (p. 260): Discuss properties of lasso regression.
+
+### (a) As we increase $s$ from 0, the training RSS will :
+iv. Steadily decrease. As we increase $s$ from 0, all $\beta$'s increase from $0$ to their least square estimates, and so the model is becoming more and more flexible which provokes a steady decrease in the training RSS.
+
+### (b) Repeat (a) for test RSS.
+ii. Decrease initially, and then eventually start increasing in a U shape. When $s = 0$, all $\beta$'s are $0$, the model is extremely simple and has a high test RSS. As we increase $s$ from 0, all $\beta$'s increase from $0$ to their least square estimates, and so the model is becoming more and more flexible which provokes at first a decrease in the test RSS. Eventually, as $beta$'s approach their full blown OLS values, they start overfitting to the training data, increasing test RSS.
+
+### (c) Repeat (a) for variance.
+iii. Steadily increase. When $s = 0$, the model effectively predicts a constant and has almost no variance. As we increase $s$ from 0, the models includes more $\beta$'s and their values start increasing. At this point, the values of $\beta$'s become highly dependent on training data, thus increasing the variance.
+
+### (d) Repeat (a) for (squared) bias.
+iv. Steadily decrease. When $s = 0$, the model effectively predicts a constant and hence the prediction is far from actual value. As we increase $s$ from 0, more $\beta$'s become non-zero and thus the model continues to fit training data better. And thus, bias decreases.
+
+(e) Repeat (a) for the irreducible error.
+v. Remain constant. By definition, the irreducible error is independant of the model, and consequently independant of the value of $s$.
+
+## Exercise 3 (Applied: Model Comparison)
+Exercise 9 (p. 263): Compare different methods (least squares, ridge, lasso, PCR, PLS) for College data. Perform additionally hybrid stepwise variable selection as well as elastic net.
+
+### (a) Split the data set into a training and a test set.
+```{r,warning=FALSE}
+library(ISLR)
+library(leaps)
+library(glmnet)
+data(College)
+set.seed(11)
+train = sample(1:dim(College)[1], dim(College)[1] / 2)
+test <- -train
+College.train <- College[train, ]
+College.test <- College[test, ]
+```
+
+## (b) Fit a linear model using least squares on the training set, and report the test error obtained.
+```{r}
+fit.lm <- lm(Apps ~ ., data = College.train)
+pred.lm <- predict(fit.lm, College.test)
+mean((pred.lm - College.test$Apps)^2)
+```
+The test error obtained is 1538442.
+
+### (c) Fit a ridge regression model on the training set, with $\lambda$ chosen by cross-validation. Report the test error obtained.
+```{r,warning=FALSE}
+train.mat <- model.matrix(Apps ~ ., data = College.train)
+test.mat <- model.matrix(Apps ~ ., data = College.test)
+grid <- 10 ^ seq(4, -2, length = 100)
+fit.ridge <- glmnet(train.mat, College.train$Apps, alpha = 0, lambda = grid, thresh = 1e-12)
+cv.ridge <- cv.glmnet(train.mat, College.train$Apps, alpha = 0, lambda = grid, thresh = 1e-12)
+bestlam.ridge <- cv.ridge$lambda.min
+bestlam.ridge
+pred.ridge <- predict(fit.ridge, s = bestlam.ridge, newx = test.mat)
+mean((pred.ridge - College.test$Apps)^2)
+```
+The test error obtained is 1608859.
+
+### (d) Fit a lasso model on the training set, with $\lambda$ chosen by cross-validation. Report the test error obtained, along with the number of non-zero coefficient estimates.
+```{r,warning=FALSE}
+fit.lasso <- glmnet(train.mat, College.train$Apps, alpha = 1, lambda = grid, thresh = 1e-12)
+cv.lasso <- cv.glmnet(train.mat, College.train$Apps, alpha = 1, lambda = grid, thresh = 1e-12)
+bestlam.lasso <- cv.lasso$lambda.min
+bestlam.lasso
+pred.lasso <- predict(fit.lasso, s = bestlam.lasso, newx = test.mat)
+mean((pred.lasso - College.test$Apps)^2)
+```
+The test error obtained is 1635280.
+
+The coefficients are, 
+```{r,warning=FALSE}
+predict(fit.lasso, s = bestlam.lasso, type = "coefficients")
+```
+
+### (e) Fit a PCR model on the training set, with $M$ chosen by cross-validation. Report the test error obtained, along with the value of $M$ selected by cross-validation.
+```{r,warning=FALSE}
+library(pls)
+fit.pcr <- pcr(Apps ~ ., data = College.train, scale = TRUE, validation = "CV")
+validationplot(fit.pcr, val.type = "MSEP")
+pred.pcr <- predict(fit.pcr, College.test, ncomp = 10)
+mean((pred.pcr - College.test$Apps)^2)
+```
+The test error obtained is 3014496.
+
+### (f) Fit a PLS model on the training set, with $M$ chosen by cross-validation. Report the test error obtained, along with the value of $M$ selected by cross-validation.
+```{r,warning=FALSE}
+fit.pls <- plsr(Apps ~ ., data = College.train, scale = TRUE, validation = "CV")
+validationplot(fit.pls, val.type = "MSEP")
+pred.pls <- predict(fit.pls, College.test, ncomp = 10)
+mean((pred.pls - College.test$Apps)^2)
+```
+The test error obtained is 1508987.
+
+### (g) Comment on the results obtained. How accurately can we predict the number of college applications received ? Is there much difference among the test errors resulting from these five approaches ?
+```{r,warning=FALSE}
+test.avg <- mean(College.test$Apps)
+lm.r2 <- 1 - mean((pred.lm - College.test$Apps)^2) / mean((test.avg - College.test$Apps)^2)
+ridge.r2 <- 1 - mean((pred.ridge - College.test$Apps)^2) / mean((test.avg - College.test$Apps)^2)
+lasso.r2 <- 1 - mean((pred.lasso - College.test$Apps)^2) / mean((test.avg - College.test$Apps)^2)
+pcr.r2 <- 1 - mean((pred.pcr - College.test$Apps)^2) / mean((test.avg - College.test$Apps)^2)
+pls.r2 <- 1 - mean((pred.pls - College.test$Apps)^2) / mean((test.avg - College.test$Apps)^2)
+barplot(c(lm.r2, ridge.r2, lasso.r2, pcr.r2, pls.r2),
+        names.arg=c("OLS","Ridge","Lasso", "PCR", "PLS"), main="Test R-squared")
+```
+
+So the test $R^2$ for least squares is `r lm.r2`, the test $R^2$ for ridge is `r ridge.r2`, the test $R^2$ for lasso is `r lasso.r2`, the test $R^2$ for pcr is `r pcr.r2` and the test $R^2$ for pls is `r pls.r2`. 
+
+The plot shows that test $R^2$ for all models except PCR are around 0.9, with PLS having slightly higher test $R^2$ than others. PCR has a smaller test $R^2$ of less than 0.8. All models except PCR predict college applications with high accuracy. 
+
+### Hybrid stepwise variable selection
+```{r,warning=FALSE}
+regfit.fwd = regsubsets(Apps ~ ., data = College.train, method ="forward")
+summary(regfit.fwd)
+regfit.bwd = regsubsets(Apps ~ ., data = College.train, method ="backward")
+summary(regfit.bwd)
+coef(regfit.fwd,3)
+coef(regfit.bwd,3)
+```
+Using forward stepwise selection, the best one variable
+model contains only Accept, and the best two-variable model additionally includes Expend. For this data, the best one-variable andtwo-variable models are each identical for forward and backward selection. However, the best three-variable models identified by forward stepwise selection and backward stepwise selection are different.
+
+### Elastic net
+```{r,warning=FALSE}
+fit.elastic <- glmnet(train.mat, College.train$Apps, alpha = 0.5, lambda = grid, thresh = 1e-12)
+cv.elastic <- cv.glmnet(train.mat, College.train$Apps, alpha = 0.5, lambda = grid, thresh = 1e-12)
+bestlam.elastic <- cv.elastic$lambda.min
+bestlam.elastic
+pred.elastic <- predict(fit.elastic, s = bestlam.elastic, newx = test.mat)
+mean((pred.elastic - College.test$Apps)^2)
+```
+The test error obtained is 1685379.
+
+## Exercise 4 (Applied: Bootstrap and Lasso; to be graded in detail)
+Here we use the bootstrap as the basis for inference with the lasso.
+
+### (a) 
+```{r,warning=FALSE}
+library(boot)
+set.seed(1)
+coeffcients.fn=function(data,index){
+  coef.lasso <- predict(glmnet(train.mat[index,], College.train[index,]$Apps,
+                               alpha = 1, lambda = grid, thresh = 1e-12), s =
+                          bestlam.lasso, type = "coefficients")
+  return (coef.lasso[1:19])}
+coeffcients.fn(College.train,1:100)
+coeffcients.fn(College.train,sample(100,100, replace =T))
+boot(College.train,coeffcients.fn, R=100)
+```
+
+### (b) 
+```{r,warning=FALSE}
+set.seed(1)
+coeffcients.fn2=function(data,index){
+  cv.lasso2 <- cv.glmnet(train.mat[index,], College.train[index,]$Apps, 
+                         alpha =1, lambda = grid, thresh = 1e-12)
+  bestlam.lasso2 <- cv.lasso2$lambda.min
+  coef.lasso <- predict(glmnet(train.mat[index,], College.train[index,]$Apps,
+                               alpha = 1, lambda = grid, thresh = 1e-12), s =
+                          bestlam.lasso2, type = "coefficients")
+  return (coef.lasso[1:19])}
+boot(College.train,coeffcients.fn2, R=100)
+```
+
+## Exercise 5 (Applied: Model Comparison)
+Exercise 11 (p. 264): Compare different methods to predict per capita crime rate in the Boston data set.
+
+### (a) Try out some of the regression methods explored in this chapter, such as best subset selection, the lasso, ridge regression and PCR. Present and discuss results for the approaches that you consider.
+
+Best subset selection:
+```{r,warning=FALSE}
+library(MASS)
+data(Boston)
+set.seed(1)
+
+predict.regsubsets <- function(object, newdata, id, ...) {
+    form <- as.formula(object$call[[2]])
+    mat <- model.matrix(form, newdata)
+    coefi <- coef(object, id = id)
+    xvars <- names(coefi)
+    mat[, xvars] %*% coefi
+}
+
+k = 10
+folds <- sample(1:k, nrow(Boston), replace = TRUE)
+cv.errors <- matrix(NA, k, 13, dimnames = list(NULL, paste(1:13)))
+for (j in 1:k) {
+    best.fit <- regsubsets(crim ~ ., data = Boston[folds != j, ], nvmax = 13)
+    for (i in 1:13) {
+        pred <- predict(best.fit, Boston[folds == j, ], id = i)
+        cv.errors[j, i] <- mean((Boston$crim[folds == j] - pred)^2)
+    }
+}
+mean.cv.errors <- apply(cv.errors, 2, mean)
+plot(mean.cv.errors, type = "b", xlab = "Number of variables", ylab = "CV error")
+```
+
+We may see that cross-validation selects an `r which.min(mean.cv.errors)`-variables model. We have a CV estimate for the test MSE equal to `r mean.cv.errors[which.min(mean.cv.errors)]`.
+
+Lasso:
+```{r,warning=FALSE}
+x <- model.matrix(crim ~ ., Boston)[, -1]
+y <- Boston$crim
+cv.out <- cv.glmnet(x, y, alpha = 1, type.measure = "mse")
+plot(cv.out)
+```
+
+Here cross-validation selects a $\lambda$ equal to `r cv.out$lambda.min`. We have a CV estimate for the test MSE equal to `r cv.out$cvm[cv.out$lambda == cv.out$lambda.min]`.
+
+Ridge regression:
+```{r,warning=FALSE}
+cv.out <- cv.glmnet(x, y, alpha = 0, type.measure = "mse")
+plot(cv.out)
+```
+
+Here cross-validation selects a $\lambda$ equal to `r cv.out$lambda.min`. We have a CV estimate for the test MSE equal to `r cv.out$cvm[cv.out$lambda == cv.out$lambda.min]`.
+
+PCR:
+```{r,warning=FALSE}
+pcr.fit <- pcr(crim ~ ., data = Boston, scale = TRUE, validation = "CV")
+summary(pcr.fit)
+validationplot(pcr.fit, val.type = "MSEP")
+```
+
+Here cross-validation selects $M$ to be equal to 14 (so, no dimension reduction). We have a CV estimate for the test MSE equal to `r MSEP(pcr.fit)$val[14]`.
+
+### (b) Propose a model (or set of models) that seem to perform well on this data set, and justify your answer. Make sure that you are evaluating model performance using validation set error, cross-validation, or some other reasonable alternative, as opposed to using training error.
+As computed above the model with the lower cross-validation error is the one chosen by the best subset selection method.
+
+### (c) Does your chosen model involve all of the features in the data set ? Why or why not ?
+No, the model chosen by the best subset selection method has only 13 predictors.
+
+## Exercise 6 (Applied: Model Selection and GAMs)
+### (a) Get an overview of the data and do simple descriptive analysis including a correlation analysis and a scatterplot matrix.
+```{r,warning=FALSE}
+library(TH.data)
+attach(bodyfat)
+cor(subset(bodyfat))
+pairs(bodyfat)
+```
+
+### (b) Fit a linear model assuming normal errors. Are all potential covariates informative? Check the results against a model that underwent AIC-based variable selection.
+```{r,warning=FALSE}
+lm1 = lm(DEXfat~., data=bodyfat)
+summary(lm1)
+```
+There is a relatioship between the predictors and the response by testing the null hypothesis of whether all the regression coefficients are zero. The F -statistic is has a small p-value, less than 0.01, indicating that we can reject the null hypothesis. Therefore, there is a significant relatioship between the predictors and the response DEXfat.
+
+From the p-values of each predictor, waistcirc, hipcirc and kneebreadth have a statistically significant relationship to the response(since they have small p-values < 0.01).
+
+The potential covariates are informative. From the correlation matrix, waistcirc and hipcirc are higher correlated with DEXfat(>=0.9).
+
+AIC:
+```{r,warning=FALSE}
+null=lm(DEXfat~1, data=bodyfat)
+null
+full=lm(DEXfat~., data=bodyfat)
+full
+step(null, scope=list(lower=null, upper=full), direction="forward")
+step(full, data=bodyfat, direction="backward")
+```
+In the forward selection, I start with no predictors, add the variable with the largest t value if it is significant, and stop when none of the t values are significant. The last step is,
+Step:  AIC=172.04
+DEXfat ~ hipcirc + anthro4 + waistcirc + kneebreadth + anthro3b
+
+In the backwards elimination, I start with the full model, and eliminate the least significant variable at each stage, until all the variables in the model are significant. The last step is,
+Step:  AIC=170.09
+DEXfat ~ waistcirc + hipcirc + kneebreadth + anthro3b
+
+Before we get waistcirc, hipcirc and kneebreadth have a statistically significant relationship to the DEXfat because of small p-values, and these variabels contain in the AIC-based model we selected.
+
+### (c) Check the model assumptions of the final model and give short arguments whether they are fullfilled or not.
+```{r,warning=FALSE}
+lm2 = lm(DEXfat~waistcirc+hipcirc+kneebreadth, data=bodyfat)
+summary(lm2)
+par(mfrow=c(2,2))
+plot(lm2)
+```
+The model does not fit some assumptions. One is that the curve pattern in the residuals plot indicates non-linearity in the data. The other is from the leverage plot, point 94 and 91 appear to have high leverage, and point 87 appears to be a residual.
+
+### (d) Fit a generalized additive model using the results you obtained so far. Use the function gam() in the mgcv package and fitt cubic spline effects using the option bs='cr'.
+We’ll start with the typical linear model approach.
+```{r,warning=FALSE}
+library(mgcv)
+gam.m1=gam(DEXfat~waistcirc+hipcirc+kneebreadth,data=bodyfat)
+summary(gam.m1)        
+```
+It appears we have statistical significant effects for waistcirc and hipcirc, but not for kneebreadth, and the adjusted R-squared suggests a notable amount of the variance is accounted for. Now look at the nonlinear effects for each covariate,
+```{r,warning=FALSE}
+gam.m2 <- gam(DEXfat ~ s(waistcirc,bs='cr') + s(hipcirc,bs='cr') + s(kneebreadth,bs='cr'),
+              data = bodyfat) 
+summary(gam.m2)
+```
+The cubic effects for kneebreadth is significant in the nonlinear model, as well as the effects for waistcirc and hipcirc.
+
+### (e) Check again the model assumptions of your final model and compare the results to the one obtained in the linear model.
+```{r,warning=FALSE}
+par(mfrow=c(2,2))
+plot(gam.m2)
+```
+
+The final generalized additive model satisfies the assumptions of the absence of interaction effects and the assumptions of nonlinear which we can see from the plot. The cubic effects for kneebreadth is significant in the nonlinear model, as well as the effects for waistcirc and hipcirc. The conclusion for the nonlinear generalized additive model in is different from the linear generalized additive model regarding the individual effects from $gam.m1$, but it is the same as the linear model assuming normal errors we fit in part b. 
