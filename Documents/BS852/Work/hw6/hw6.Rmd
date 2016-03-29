@@ -1,0 +1,38 @@
+---
+output: pdf_document
+---
+## d. Plot the two survival curves and comment the results.
+First, I construct the data. For treatment, 0 is Treatment A, and 1 is Treatment B.  For status, 1 is fail, and 0 is censored. Since the DFS for S7 in Treatment B is >36, I just set it to be 37.
+
+Below is the plot of the two survival curves. 
+```{r}
+library(survival)
+DFS <- c(1, 3, 3, 4, 4, 6, 6, 6, 22, 7, 9, 8, 9, 9, 10, 11, 15, 25,
+         6, 5, 7, 15, 24, 8, 3, 13, 14, 25, 27, 37)
+status <- c(rep(1,29),0)
+treatment <- c(rep(0,18), rep(1,12))
+ova.cancer <- as.data.frame(cbind(DFS, status, treatment))
+ova.cancer
+attach(ova.cancer)
+fit <- survfit(Surv(DFS, status) ~ treatment, data=ova.cancer)
+summary(fit)
+plot(fit, firstx=0, mark.time=T, mark=c(1,2), col=c(1,2), ylim=c(0,1), xlab="Ovarian cancer", ylab="Disease free survival", main="Kaplen Meier Curves", cex.axis=1.5, cex.lab=1.5)
+legend(x=18,y=1,legend=c("Treatment A","Treatment B"), col=c(1,2),lwd=2,cex=1.2)
+```
+
+From the plot, the survival distribution for women with Treatment A and Treatment B are not so much differnt.
+
+I also use the Log-Rank Test to prove this result. H0: S1(t)=S2(t); H1: $S1(t)=[S2(t)]^{\theta}$.
+```{r}
+survdiff(Surv(DFS,status) ~ treatment, data=ova.cancer)
+```
+From the output, since the p-value is 0.0512>0.05, we can not reject the H0. We conclude the two survival curves are not statistically different, which improves the plot we draw.
+
+I also plot the log comparision.
+
+```{r}
+plot(log(fit$time),log(-log(fit$surv)))
+lines(log(fit$time[1:12]),log(-log(fit$surv[1:12])))
+lines(log(fit$time[13:24]),log(-log(fit$surv[13:24])),col=2)
+legend(x=0.1,y=1,legend=c("1:12 Index","13:24 Index"), col=c(1,2),lwd=2,cex=1.2)
+```

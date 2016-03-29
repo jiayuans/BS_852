@@ -1,0 +1,63 @@
+---
+title: "BS852 HOMEWORK 3"
+author: "Jiayuan Shi"
+date: "Feb.12, 2016"
+output: pdf_document
+---
+
+## A 
+### Do you find significant evidence of increasing odds of MI with an increase in coffee consumption? Provide evidence for your conclusion.
+
+I use the Mantel Extension Chi-square Test. Let the standard scores be an ordinal score for coffee consumption, so the standard scores are,  
+1 for coffee consumption 0, <1;  
+2 for coffee consumption 1, 2;  
+3 for coffee consumption 3, 4;  
+4 for coffee consumption 5+;  
+
+H0 : There is no linear association between coffee consumption and odds of MI in women;    
+H1 : There is a linear association between coffee consumption and odds of MI in women.  
+I use the function in R as followings,  
+```{r}
+prop.trend.test( x=c(26,57,36,41), n=c(44,85,50,51), score=c(1,2,3,4))
+```
+
+From the above results, I get the X-squared 5.4356, with 1 df, and the p-value is 0.01973. The p-value is less than 0.05, so with 95% confidence interval, we reject the H0, and conclude that there is linear association between coffee consumption and odds of MI in women. Since from the given chart the odds of MI are increasing with the increase in coffee consumption, there is significant evidence of ORs increading from 1.0 for 0, <1 coffee consumption, to 1.4 for 1,2 coffee consumption, to 1.8 for 3,4 coffee consumption, to 2.8 for 5+ coffee consumption.
+
+## B 
+### 1. Is there evidence of a linear increase of odds for mortality with increasing stage at diagnosis?  
+
+Hand-writing on the paper.
+
+### 2. Is there evidence of interaction between stage at diagnosis and receptor level?
+
+```{r}
+library(epiR)
+data <- c(2,10,5,50,9,13,17,57,12,2,9,6)
+dim(data) <- c(2,2,3)
+dimnames(data)[[1]] <- c("Dead", "Alive")
+dimnames(data)[[2]] <- c("Receptor low", "Receptor high")
+dimnames(data)[[3]] <- c("Stage 1", "Stage 2", "Stage 3")
+data
+# Testing interaction, Breslow Day test
+res.BD <- epi.2by2(dat=data, method="case.control", homogeneity="breslow.day", conf.level=0.95)
+summary(res.BD)
+```
+Breslow Day test:  
+H0: OR1 and OR2 is equal; H1: OR1 and OR2 is not equal.  
+From the $OR.homog results, we can get the test statistic chi-square is 0.34, with df=2, and the p-value is 0.84. The p-value is larger than 0.05, so with 95% confidence, we can not reject the null hypothesis. Hence, OR1 and OR2 is similar, and there is no interaction between stage at diagnosis and receptor level.
+
+### 3. Is there a significant association between receptor level and 5 years mortality?
+```{r}
+mantelhaen.test(data)
+```
+Mantel-Haenszel chi-square test:    
+H0: there is no association between receptor level and 5 years mortality; H1: there is an association between receptor level and 5 years mortality.  
+From the above output, we can see that the Mantel-Haenszel X-squared is 4.5587 with 1 df, and the p-value is 0.0328, less than 0.001, so we can reject the null hypothesis. Hence, there is an significant association between receptor level and 5 years mortality.  
+
+From the above output, the 95% confidence interval for the age-adjusted association is (1.1634, 5.5450). With 95% confidence, we estimate that the true adjusted OR for dead lies between 1.1634 and 5.5450. This confidence interval excludes 1. There is statistically significant evidence to reject H0 and suggest an increased odds of dead among those who have low estrogen receptor after adjusting for stage of cancer at diagnosis.
+
+Based on the adjusted analysis, the odds ratio is 2.54, so after adjusting for stage of cancer at diagnosis, those who have low estrogen receptor are at 2.54 times the odds of dead compared to those who have high estrogen receptor.
+
+## C 
+
+Hand-writing on the paper.

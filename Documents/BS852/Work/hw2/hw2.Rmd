@@ -1,0 +1,138 @@
+---
+title: "BS852 HOMEWORK 2"
+author: "Jiayuan Shi"
+date: "Feb.4, 2016"
+output: pdf_document
+---
+
+## 1
+### a. Test whether there is interaction between smoking and coffee use using both Breslow day test and the Woolf’s method.
+
+```{r}
+library(epiR)
+palmer.data <- c(30, 33, 207, 327, 117, 25, 216, 114)
+dim(palmer.data) <- c(2,2,2)
+dimnames(palmer.data)[[1]] <- c("MI", "No MI")
+dimnames(palmer.data)[[2]] <- c("Coffee 5+", "Coffee 0-4")
+dimnames(palmer.data)[[3]] <- c("Never/Former", "Current")
+palmer.data
+# Testing interaction, Breslow Day test
+res.BD <- epi.2by2(dat=palmer.data, method="case.control", homogeneity="breslow.day", conf.level=0.95)
+summary(res.BD)
+# Testing interaction, Woolf’s method
+res.W <- epi.2by2(dat=palmer.data, method="case.control", homogeneity="woolf", conf.level=0.95)
+summary(res.W)
+```
+
+Breslow Day test:  
+H0: OR1 and OR2 is equal; H1: OR1 and OR2 is not equal.  
+From the $OR.homog results, we can get the test statistic chi-square is 2.22, with df=1, and the p-value is 0.136. The p-value is larger than 0.05, so with 95% confidence, we can not reject the null hypothesis. Hence, OR1 and OR2 is similar, and there is no interaction between smoking and coffee use using Breslow Day test.
+
+Woolf’s method:  
+H0: OR1 and OR2 is equal; H1: OR1 and OR2 is not equal.  
+From the $OR.homog results, we can get the test statistic chi-square is 2.12, with df=1, and the p-value is 0.145. The p-value is larger than 0.05, so with 95% confidence, we can not reject the null hypothesis. Hence, OR1 and OR2 is similar, and there is no interaction between smoking and coffee use using Woolf’s method.
+
+### b. Show whether there is confounding.
+```{r}
+epi.2by2(dat=palmer.data, method="case.control", conf.level=0.95)
+```
+
+The adjusted odds ratio is 1.95, while the crude odds ratio is 2.64. The ratio $\frac{OR_{adjusted}}{OR_{crude}}=\frac{1.95}{2.64.}=0.74$. 0.74 is not in the (0.9,1.1) interval, which means the two measures differ by more than 10%, so we conclude that there is confounding, and we summarize the results of the adjusted analysis.
+
+### c. Produce the Mantel-Haenszel chi-square test statistic to test whether there is an association between coffee consumption and MI using the continuity correction and without using the continuity corrections.
+```{r}
+# using the continuity correction
+mantelhaen.test(palmer.data)
+```
+Mantel-Haenszel chi-square test(using the continuity correction):    
+H0: there is no association between coffee consumption and MI after adjusting for smoking; H1: there is an association between coffee consumption and MI after adjusting for smoking.  
+From the above output, we can see that the Mantel-Haenszel X-squared is 13.282 with 1 df, and the p-value is 0.00027, less than 0.001, so we can reject the null hypothesis. Hence, there is an significant association between coffee consumption and MI using the continuity correction.
+
+Based on the adjusted analysis, the odds ratio is 1.95, so after adjusting for smoking, those who have consumed 5+ cups coffee are at 1.95 times the odds of an MI compared to those who have consumed 0-4 cups coffee.
+
+```{r}
+# without using the continuity correction
+mantelhaen.test(palmer.data, correct = F)
+```
+Mantel-Haenszel chi-square test(without using the continuity correction):  
+H0: there is no association between coffee consumption and MI after adjusting for smoking; H1: there is an association between coffee consumption and MI after adjusting for smoking.  
+From the above output, we can see that the Mantel-Haenszel X-squared is 13.913 with 1 df, and the p-value is 0.00019, less than 0.001, so we can reject the null hypothesis. Hence, there is an significant association between coffee consumption and MI without using the continuity correction.
+
+Based on the adjusted analysis, the odds ratio for is 1.95, so after adjusting for smoking, those who have consumed 5+ cups coffee are at 1.95 times the odds of an MI compared to those who have consumed 0-4 cups coffee.
+
+### d. Write down the conclusions of your study.
+Conclusions:  
+1. There is no evidence of interaction between smoking and coffee use using both Breslow Day test and Woolf’s method.  
+2. There is confounding because crude OR and adjusted OR differ by less than 10%, and we summarize the results of the adjusted analysis.  
+3. Based on the adjusted analysis, the odds ratio is 1.95, so after adjusting for smoking, those who have consumed 5+ cups coffee are at 1.95 times the odds of an MI compared to those who have consumed 0-4 cups coffee. The association is statistically significant (MH statistic = 13.282, p-value = 0.00027 with continuity correction, and MH statistic = 13.913, p-value = 0.00019 without continuity correction).  
+
+## 2
+### a. a crude odds ratio
+```{r}
+framdat2 <- read.table("framdat2.txt", header = T, sep = "", na.strings = c("."))
+framdat2[1:5,]
+framdat2 <- framdat2[which(framdat2$SEX==2 & (framdat2$CHD==0 | framdat2$CHD>4)),]
+attach(framdat2)
+agef <- AGE
+agef[which(AGE>=35 & AGE<45)] <- 1
+agef[which(AGE>=45 & AGE<55)] <- 2
+agef[which(AGE>=55 & AGE<65)] <- 3
+agef[which(AGE>=65 & AGE<75)] <- 4
+chd_sw = CHD<4
+gli4 = GLI==0
+fhd.data <- table(gli4, chd_sw, agef)
+fhd.data
+res <- epi.2by2(dat = fhd.data, method = "cohort.count", conf.level = 0.95)
+res
+```
+
+As we can see in the R ourput for res, 
+```{r}
+# Odds ratio (W) (crude)                       3.22 (1.83, 5.67)
+```
+The crude odds ratio is 3.22, with 95% CI (1.83, 5.67).
+
+### b. stratum-specific odds ratios
+```{r}
+summary(res)
+```
+As we can see in the R ourput, the stratum-specific odds ratios $OR.strata.wald are,  
+       est     lower     upper  
+1 3.398496 0.8547537 13.512403  
+2 3.128205 1.0865101  9.006513  
+3 3.347788 1.4272525  7.852627  
+4 0.000000 0.0000000       NaN 
+
+So for Group 1, the OR is 3.40 with 95% CI (0.85,13.51); for Group 2, the OR is 3.12 with 95% CI (1.09,9.01); for Group 3, the OR is 3.35 with 95% CI (1.43,7.86); for Group 4, the OR is 0.
+
+### c. a summary odds ratio adjusting for age
+```{r}
+res
+# Odds ratio (M-H)                             2.69 (1.52, 4.76)
+```
+The summary odds ratio adjusting for age is 2.69, with 95% CI (1.52, 4.76).
+
+### d. a Mantel-Haenszel chi-square test statistic testing the age-adjusted association between gli4 and CHD
+```{r}
+mantelhaen.test(fhd.data)
+```
+H0: there is no the age-adjusted association between gli4 and CHD; H1: there is an age-adjusted association between gli4 and CHD.  
+From the above output, we can see the Mantel-Haenszel X-squared is 11.213 with 1 df, and the p-value is 0.0008, less than 0.001, so we can reject the null hypothesis. Hence, there is a significant age-adjusted association between gli4 and CHD among women with continuity correction.
+
+### e. a 95% confidence interval for the age-adjusted association
+```{r}
+mantelhaen.test(fhd.data)
+```
+From the above output, the 95% confidence interval for the age-adjusted association is (1.5124, 4.7989). With 95% confidence, we estimate that the true adjusted OR for CHD lies between 1.5124 and 4.7989. This confidence interval excludes 1. There is statistically significant evidence to reject H0 and suggest an increased odds of CHD among those women who have glucose intolerance after adjusting for age.
+
+### Conclusion:
+a. Confounding:  
+The odds ratio for CHD, adjusted for age, is 2.69, while
+the unadjusted odds ratio is 3.22. The ratio $\frac{OR_{adjusted}}{OR_{crude}}=\frac{2.69}{3.22}=0.835$. 0.835 is not in the (0.9,1.1), and the two measures differ by more than 10%, so we conclude that age confounds the association between glucose intolerance and CHD among women, and we summarize the results of the adjusted analysis.
+
+b. Interaction:  
+From the Breslow Day test, H0: OR1 and OR2 is equal; H1: OR1 and OR2 is not equal.    
+As we can see in the $OR.homog from $summary(res)$ results, we can get the test statistic chi-square is 4.557 with 3 df, and the p-value is 0.207. The p-value is larger than 0.05, so with 95% confidence, we can not reject the null hypothesis. Hence, OR1 and OR2 is similar, and there is no interaction between glucose intolerance and age among women.
+
+c. Relationship:  
+Based on the adjusted analysis, the odds ratio for CHD is 2.69 (95% (1.5124, 4.7989)),so after adjusting for age, women with glucose intolerance have 2.69 times the odds for CHD compared to women without glucose intolerance. The association between glucose intolerance measured at exam 4 and development of coronary heart disease over 22 years of follow-up among women is statistically significant(MH statistic = 11.213, p-value = 0.0008 < 0.001). Also with 95% confidence, we estimate that the true adjusted OR for CHD lies between 1.5124 and 4.7989. This confidence interval excludes 1. There is statistically significant evidence to reject H0 and suggest an increased odds of CHD among those women who have glucose intolerance after adjusting for age.

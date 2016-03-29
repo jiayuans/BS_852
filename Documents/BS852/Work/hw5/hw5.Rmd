@@ -1,0 +1,109 @@
+---
+title: "HOMEWORK 5"
+author: "Jiayuan Shi"
+date: "Feb 25, 2016"
+output: pdf_document
+---
+
+## 2
+### a. Perform a chi-square test for the hypothesis that the two treatment groups are the same with respect to 90-day survival rates. What is the odds ratio of dying in the test group compared to the standard group? State your conclusions from this analysis.
+
+```{r}
+Lungca <- read.table("Lungca(1).txt",header=T,na.strings=c("."))
+attach(Lungca)
+mod.crude <- glm(Y ~ X1, family=binomial) 
+estimates.crude <- summary(mod.crude)
+estimates.crude
+estimates.crude$coefficients
+OR.crude = exp(estimates.crude$coefficients[,1])
+LL.crude = exp(estimates.crude$coefficients[,1] - 1.96*estimates.crude$coefficients[,2])
+UL.crude = exp(estimates.crude$coefficients[,1]+
+1.96*estimates.crude$coefficients[,2])
+cbind(OR.crude, LL.crude, UL.crude)
+
+library(aod)
+confint.default(mod.crude)
+exp(cbind(OR = coef(mod.crude), confint.default(mod.crude)))
+wald.test(b=coef(mod.crude), Sigma=vcov(mod.crude), Terms=2)
+```
+
+H0: b1 = 0, the two treatment groups are the same;  
+H1: b1 $\neq$ 0, the two treatment groups are not the same.    
+LR test:  
+$\chi^2$ = -2lnR = 188.69 - 184.74 = 3.95 with 1 df, p-value =  0.04687 < 0.05  
+Wald test:  
+$\chi^2$ = 3.9 with 1 df, p-value =  0.049 < 0.05  
+
+Since the p-value is <0.05, we can reject the H0, and conclude that the two treatment groups are significantly different. With 95% confidence, we estimate that the true OR for dying lies between 1.004 and 3.938. This confidence interval also excludes 1. There is statistically significant evidence to reject H0 and suggest an increased odds of dying in the test group.  
+
+The odds ratio of dying in the test group compared to
+the standard group is 1.989, which means those patients who in test group have 1.989 times the odds of dying, compared to those who in standard group.  
+
+### b. Utilize logistic regression methods to re-evaluate the central question of the study, adjusting for all potential confounders measured. Do the two groups now differ with respect to 90-day survival rates after adjustment for confounders? Be complete.
+
+```{r}
+mod.confounder <- glm(Y ~ X2+X3+X4+X5+X6+X7+X8, family=binomial) 
+mod.adjusted <- glm(Y ~ X1+X2+X3+X4+X5+X6+X7+X8, family=binomial) 
+anova(mod.confounder,mod.adjusted)
+estimates.adjusted <- summary(mod.adjusted)
+estimates.adjusted
+estimates.adjusted$coefficients
+```
+
+H0: the two treatment groups are the same after adjustment for all potential confounders measured;
+H1: the two treatment groups are different after adjustment for all potential confounders measured.  
+LR test:  
+$\chi^2$ = -2lnR = 124.38 - 118.89 = 5.4882 with 1 df, p-value = 0.02  
+Since the p-value from both tests is <0.05, we can reject the H0, and conclude that the two treatment groups are significantly different with respect to 90-day
+survival rates after adjustment for all potential confounders measured.
+
+### c. According to this model, what is the estimated odds ratio of dying in the test group compared to the standard group? Compute a 95% confidence interval. Interpret this result.
+```{r}
+OR.adjusted = exp(estimates.adjusted$coefficients[,1])
+LL.adjusted = exp(estimates.adjusted$coefficients[,1] - 1.96*estimates.adjusted$coefficients[,2])
+UL.adjusted = exp(estimates.adjusted$coefficients[,1]+
+1.96*estimates.adjusted$coefficients[,2])
+cbind(OR.adjusted, LL.adjusted, UL.adjusted)
+```
+Form the R results, with 95% confidence, we estimate that the true OR for dying lies between 1.163 and 7.713. This confidence interval also excludes 1. There is statistically significant evidence to reject H0 and suggest an increased odds of dying in the test group after adjustment for confounders.  
+
+After adjustment for confounders, the odds ratio of dying in the test group compared to the standard group is 2.994, which means after adjustment for confounders, those patients who in test group have 2.994 times the odds of dying, compared to those who in standard group.  
+
+### d. What other variables are associated with 90-day survival? Provide evidence. (To examine whether cell type is associated with survival, perform a likelihood ratio test of the 3 variables associated with cell type: X2, X3 and X4).
+```{r}
+estimates.adjusted # X1, X3, X4 and X5 are significant 
+```
+H0: all the variables are not associated with 90-day survival;
+H1: at least one of the variables are associated with 90-day survival.
+
+From the full model, we can see in the output of $estimates.adjusted$, the p-values of X1, X3, X4 and X5 are less than 0.05, and we can reject the H0 for X1, X3, X4 and X5. We conclude that there is significant evidence that X1, X3, X4 and X5 are associated with 90-day survival.  
+
+After that, we perform a likelihood ratio test of the 3 variables associated with cell type: X2, X3 and X4.
+
+```{r}
+mod.confounder <- glm(Y ~ X1+X5+X6+X7+X8, family=binomial) 
+mod.adjusted <- glm(Y ~ X1+X2+X3+X4+X5+X6+X7+X8, family=binomial) 
+anova(mod.confounder,mod.adjusted)
+```
+H0: type is not associated with 90-day survival after adjustment for confounders;
+H1: type is associated with 90-day survival after adjustment for confounders.  
+LR test:  
+$\chi^2$ = -2lnR = 137.56 - 118.89 = 18.663 with 3 df, p-value = 0.0003  
+Since the p-value from both tests is <0.05, we can reject the H0, and conclude that type is significantly associated with 90-day survival after adjustment for confounders.
+
+In conclusion, type and performance status(X5) are also associated with 90-day survival after adjustment for confounder.   
+
+### e. What are the estimated odds of dying within 90 days for a person with performance status 60 compared to one with performance status 50, adjusting for all other measures? Compute a 95% confidence interval for this estimate. Interpret this result.
+```{r}
+mod.full <- glm(Y ~ X1+X2+X3+X4+X5+X6+X7+X8, family=binomial)
+summary(mod.full)
+```
+OR(PS=60 vs PS=50) = e^(b(60-50)) = e^(-0.079387*10) = 0.452
+Adjusting for all other measures, the estimated odds of dying within 90 days for a person with performance status 60
+compared to one with performance status 50 is 0.452. A person with performance status 60 has 0.452 the odds of dying within 90 days than a person with performance status 50.  
+
+95% confidence interval for this estimate is:
+e^((b1+/-ZSE(b1))(60-50)) = e^((-0.079387+/-1.96*0.015648)(10)) = (0.333, 0.614).  
+Adjusting for all other measures, with 95% confidence, we can say that the odds of dying within 90 days for a person with performance status 60 compare to one with performance status 50 fall into (0.333, 0.614). 
+
+
